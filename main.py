@@ -39,17 +39,25 @@ def evaluate_polynomial(coefficients, x):
         result += coef * (x ** i)
     return result
 
-def train_model(model_name, x, y, **kwargs):
+def train_model_animated(model_name, x, y, x_min, x_max, **kwargs):
+    model = None
+    predictions = []
     if model_name == 'Linear Regression':
         model = LinearRegression(**kwargs)
+        model.fit(x.reshape(-1, 1), y)
+        predictions.append(model.predict(np.linspace(x_min, x_max, 100).reshape(-1, 1)))
     elif model_name == 'Neural Network':
-        model = MLPRegressor(**kwargs)
+        model = MLPRegressor(warm_start=True, **kwargs)
+        for _ in range(kwargs['max_iter']):
+            model.fit(x.reshape(-1, 1), y)
+            predictions.append(model.predict(np.linspace(x_min, x_max, 100).reshape(-1, 1)))
     elif model_name == 'Decision Tree':
         model = DecisionTreeRegressor(**kwargs)
+        model.fit(x.reshape(-1, 1), y)
+        predictions.append(model.predict(np.linspace(x_min, x_max, 100).reshape(-1, 1)))
     else:
         raise ValueError("Invalid model name")
-    model.fit(x.reshape(-1, 1), y)
-    return model
+    return model, predictions
 
 @app.route('/random_data', methods=['POST'])
 def random_data():
@@ -74,8 +82,8 @@ def generate_plot(data, polynomial_function, model=None, x_min=None, x_max=None)
     x_values = np.array(data)[:, 0]
     y_values = np.array(data)[:, 1]
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.scatter(x_values, y_values, color='blue', label='Original Data')
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(x_values, y_values, color='blue', label='Original Data', alpha=0.4)
     
     if model and x_min is not None and x_max is not None:
         x_model = np.linspace(x_min, x_max, 100)
@@ -96,6 +104,36 @@ def generate_plot(data, polynomial_function, model=None, x_min=None, x_max=None)
     img_base64 = base64.b64encode(img.getvalue()).decode('utf8')
     return img_base64
 
+def generate_animation(data, predictions, polynomial_function):
+    x_values = np.array(data)[:, 0]
+    y_values = np.array(data)[:, 1]
+    x_model = np.linspace(min(x_values), max(x_values), 100)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.scatter(x_values, y_values, color='blue', label='Original Data', alpha=0.4)
+    ax.set_title(polynomial_function)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    
+    ax.grid(True)
+    plt.tight_layout()
+
+    img_list = []
+
+    line, = ax.plot([], [], color='red', label='Model Output')
+    ax.legend()
+    plt.tight_layout()
+
+    for y_model in predictions:
+        line.set_data(x_model, y_model)
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        img_list.append(base64.b64encode(img.getvalue()).decode('utf8'))
+
+    plt.close(fig)
+    return img_list
+
 @app.route('/train_model', methods=['POST'])
 def train_model_endpoint():
     data = request.form.get('data')
@@ -110,12 +148,12 @@ def train_model_endpoint():
 
     model_params = {
         'Linear Regression': {},
-        'Neural Network': {'hidden_layer_sizes': (100, 50), 'max_iter': 1000},
-        'Decision Tree': {'max_depth': 5}
+        'Neural Network': {'hidden_layer_sizes': (100, 50), 'max_iter': 50},
+        'Decision Tree': {'max_depth': 20}
     }
-    
+
     start_time = time.time()
-    model = train_model(model_name, x_values, y_values, **model_params[model_name])
+    model, predictions = train_model_animated(model_name, x_values, y_values, x_min, x_max, **model_params[model_name])
     end_time = time.time()
 
     training_time = end_time - start_time
@@ -123,10 +161,10 @@ def train_model_endpoint():
     mse = mean_squared_error(y_values, y_pred)
     r2 = r2_score(y_values, y_pred)
 
-    img_base64 = generate_plot(data, "", model, x_min, x_max)
-
     status = f'Model trained successfully! Training Time: {training_time:.4f} seconds, MSE: {mse:.4f}, R2: {r2:.4f}'
-    return jsonify({'img_base64': img_base64, 'status': status})
+    img_list = generate_animation(data, predictions, "")
+
+    return jsonify({'img_list': img_list, 'status': status})
 
 if __name__ == '__main__':
     app.run(debug=True)
