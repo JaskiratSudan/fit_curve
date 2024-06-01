@@ -1,5 +1,10 @@
 from flask import Flask, render_template, jsonify, request
 import random
+import matplotlib
+matplotlib.use('Agg')  # Use the 'Agg' backend for Matplotlib
+import matplotlib.pyplot as plt
+import io
+import base64
 
 app = Flask(__name__)
 
@@ -7,11 +12,8 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-# Function to generate a random polynomial of degree n
 def generate_random_polynomial(degree):
-    # Generate random coefficients for the polynomial
-    coefficients = [random.uniform(0, 1) for _ in range(degree + 1)]
-    # Construct the polynomial function string
+    coefficients = [random.uniform(-10, 10) for _ in range(degree + 1)]
     terms = []
     for i, coef in enumerate(coefficients):
         if coef != 0:
@@ -24,25 +26,45 @@ def generate_random_polynomial(degree):
     polynomial_function = "f(x) = " + " + ".join(terms)
     return coefficients, polynomial_function
 
-# Function to evaluate a polynomial at a given x
 def evaluate_polynomial(coefficients, x):
-    return sum(coef * (x ** i) for i, coef in enumerate(coefficients))
+    result = 0
+    for i, coef in enumerate(coefficients):
+        result += coef * (x ** i)
+    return result
 
 @app.route('/random_data', methods=['POST'])
 def random_data():
-    num_points = int(request.form.get('num_points', 10))
-    degree = int(request.form.get('degree', 2))  # Degree of the polynomial
+    num_points = int(request.form.get('num_points', 30))
+    degree = int(request.form.get('degree', 2))
+    x_range = request.form.get('x_range', '-1 to 1')  # Get the range of x values
+    x_min, x_max = map(float, x_range.split(' to '))  # Parse the range string
+    
     coefficients, polynomial_function = generate_random_polynomial(degree)
 
     data = []
     for _ in range(num_points):
-        x = random.uniform(-10, 10)  # Random x value between -10 and 10
+        x = random.uniform(x_min, x_max)
         y = evaluate_polynomial(coefficients, x)
-        data.append({'x': x, 'y': y})
+        data.append((x, y))
 
-    print("Polynomial Function:", polynomial_function)  # Print polynomial function to server logs
+    fig, ax = plt.subplots(figsize=(11, 6.5))  # Increase figure size
+    x_vals, y_vals = zip(*data)
+    ax.scatter(x_vals, y_vals, color='blue', alpha=0.75)  # Simple scatter plot without custom marker style
+    ax.set_xlabel('x')  # Remove fontsize and fontweight
+    ax.set_ylabel('y')  # Remove fontsize and fontweight
+    ax.axhline(y=0, color='k', linewidth=1.5)  # Remove fontweight
+    ax.axvline(x=0, color='k', linewidth=1.5)  # Remove fontweight
+    ax.grid()
+    plt.tight_layout()
 
-    return jsonify({'data': data, 'polynomial_function': polynomial_function})
+    
+    img = io.BytesIO()
+    plt.savefig(img, format='png', bbox_inches='tight')
+    img.seek(0)
+    plt.close(fig)
+
+    img_base64 = base64.b64encode(img.getvalue()).decode('utf8')
+    return jsonify({'img_base64': img_base64, 'polynomial_function': polynomial_function})
 
 if __name__ == '__main__':
     app.run(debug=True)

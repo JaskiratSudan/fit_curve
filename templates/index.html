@@ -2,77 +2,68 @@
 <html>
 <head>
     <title>Random Data Scatter Plot</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         #chartContainer {
-            width: 500px;
-            height: 500px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        img {
+            max-width: 90%;
+            max-height: 90%;
+            margin: auto;
+        }
+        .input-container {
+            margin-bottom: 20px;
+        }
+        .input-container label {
+            margin-right: 10px;
+        }
+        .input-container input {
+            width: 50px;
         }
     </style>
 </head>
 <body>
-    <div>
+    <div class="input-container">
         <label for="numPoints">Number of Data Points:</label>
         <input type="number" id="numPoints" value="10" min="1">
     </div>
-    <div>
+    <div class="input-container">
         <label for="degree">Degree of Polynomial:</label>
         <input type="number" id="degree" value="2" min="1">
     </div>
+    <div class="input-container">
+        <label for="xMin">Min x:</label>
+        <input type="number" id="xMin" value="-1" step="any">
+    </div>
+    <div class="input-container">
+        <label for="xMax">Max x:</label>
+        <input type="number" id="xMax" value="1" step="any">
+    </div>
+    <button id="generateData">Generate Random Data</button>
     <div>
         <p id="polynomialFunction"></p>
     </div>
     <div id="chartContainer">
-        <canvas id="myChart"></canvas>
+        <img id="chartImage" />
     </div>
-    <button id="generateData">Generate Random Data</button>
 
     <script>
-        var ctx = document.getElementById('myChart').getContext('2d');
-        var myChart;
-
-        function createChart() {
-            if (myChart) {
-                myChart.destroy();
-            }
-
-            myChart = new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Random Data',
-                        data: [],
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: {
-                            type: 'linear',
-                            position: 'bottom'
-                        },
-                        y: {
-                            type: 'linear',
-                            position: 'left'
-                        }
-                    }
-                }
-            });
-        }
-
         function generateData() {
             var numPoints = document.getElementById('numPoints').value;
             var degree = document.getElementById('degree').value;
-            createChart();
+            var xMin = document.getElementById('xMin').value;
+            var xMax = document.getElementById('xMax').value;
 
             fetch('/random_data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: 'num_points=' + numPoints + '&degree=' + degree
+                body: 'num_points=' + numPoints + '&degree=' + degree + '&x_min=' + xMin + '&x_max=' + xMax
             })
             .then(response => {
                 if (!response.ok) {
@@ -81,8 +72,7 @@
                 return response.json();
             })
             .then(data => {
-                myChart.data.datasets[0].data = data.data.map(point => ({ x: point.x, y: point.y }));
-                myChart.update();
+                document.getElementById('chartImage').src = 'data:image/png;base64,' + data.img_base64;
                 document.getElementById('polynomialFunction').textContent = 'Polynomial Function: ' + data.polynomial_function;
             })
             .catch(error => {
@@ -91,7 +81,6 @@
         }
 
         document.getElementById('generateData').addEventListener('click', generateData);
-        createChart(); // Initialize with scatter plot
     </script>
 </body>
 </html>
