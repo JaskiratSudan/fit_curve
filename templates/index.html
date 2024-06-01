@@ -1,86 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Random Data Scatter Plot</title>
+    <meta charset="UTF-8">
+    <title>Polynomial Fit with ML Models</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         #chartContainer {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        img {
-            max-width: 90%;
-            max-height: 90%;
-            margin: auto;
-        }
-        .input-container {
-            margin-bottom: 20px;
-        }
-        .input-container label {
-            margin-right: 10px;
-        }
-        .input-container input {
-            width: 50px;
+            width: 700px;
+            height: 500px;
         }
     </style>
 </head>
 <body>
-    <div class="input-container">
+    <div>
         <label for="numPoints">Number of Data Points:</label>
-        <input type="number" id="numPoints" value="10" min="1">
+        <input type="number" id="numPoints" value="30" min="1">
     </div>
-    <div class="input-container">
+    <div>
         <label for="degree">Degree of Polynomial:</label>
         <input type="number" id="degree" value="2" min="1">
     </div>
-    <div class="input-container">
-        <label for="xMin">Min x:</label>
-        <input type="number" id="xMin" value="-1" step="any">
+    <div>
+        <label for="xMin">Min X:</label>
+        <input type="number" id="xMin" value="-10">
     </div>
-    <div class="input-container">
-        <label for="xMax">Max x:</label>
-        <input type="number" id="xMax" value="1" step="any">
+    <div>
+        <label for="xMax">Max X:</label>
+        <input type="number" id="xMax" value="10">
+    </div>
+    <div>
+        <label for="modelType">Select Model:</label>
+        <select id="modelType">
+            <option value="Linear Regression">Linear Regression</option>
+            <option value="Neural Network">Neural Network</option>
+            <option value="Decision Tree">Decision Tree</option>
+        </select>
     </div>
     <button id="generateData">Generate Random Data</button>
-    <div>
-        <p id="polynomialFunction"></p>
-    </div>
+    <button id="trainModel">Train Model</button>
+    <div id="status"></div>
     <div id="chartContainer">
-        <img id="chartImage" />
+        <img id="generatedDataChart" src="" alt="Generated Data">
     </div>
 
     <script>
-        function generateData() {
-            var numPoints = document.getElementById('numPoints').value;
-            var degree = document.getElementById('degree').value;
-            var xMin = document.getElementById('xMin').value;
-            var xMax = document.getElementById('xMax').value;
+        let globalData = null;
+
+        document.getElementById('generateData').addEventListener('click', () => {
+            const numPoints = document.getElementById('numPoints').value;
+            const degree = document.getElementById('degree').value;
+            const xMin = document.getElementById('xMin').value;
+            const xMax = document.getElementById('xMax').value;
 
             fetch('/random_data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: 'num_points=' + numPoints + '&degree=' + degree + '&x_min=' + xMin + '&x_max=' + xMax
+                body: `num_points=${numPoints}&degree=${degree}&x_min=${xMin}&x_max=${xMax}`
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                document.getElementById('chartImage').src = 'data:image/png;base64,' + data.img_base64;
-                document.getElementById('polynomialFunction').textContent = 'Polynomial Function: ' + data.polynomial_function;
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
+                globalData = data.data;  // Store the generated data
+                document.getElementById('generatedDataChart').src = `data:image/png;base64,${data.img_base64}`;
+                document.getElementById('status').textContent = '';
             });
-        }
+        });
 
-        document.getElementById('generateData').addEventListener('click', generateData);
+        document.getElementById('trainModel').addEventListener('click', () => {
+            if (!globalData) {
+                document.getElementById('status').textContent = 'Generate data first!';
+                return;
+            }
+
+            const numPoints = document.getElementById('numPoints').value;
+            const degree = document.getElementById('degree').value;
+            const xMin = document.getElementById('xMin').value;
+            const xMax = document.getElementById('xMax').value;
+            const modelType = document.getElementById('modelType').value;
+
+            fetch('/train_model', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `num_points=${numPoints}&degree=${degree}&x_min=${xMin}&x_max=${xMax}&model_name=${modelType}&data=${JSON.stringify(globalData)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('generatedDataChart').src = `data:image/png;base64,${data.img_base64}`;
+                document.getElementById('status').textContent = data.status;
+            });
+        });
     </script>
 </body>
 </html>
