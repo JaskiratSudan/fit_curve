@@ -148,7 +148,7 @@ def train_model_endpoint():
 
     model_params = {
         'Linear Regression': {},
-        'Neural Network': {'hidden_layer_sizes': (100, 50), 'max_iter': 50},
+        'Neural Network': {'hidden_layer_sizes': (100, 50), 'max_iter': 30},
         'Decision Tree': {'max_depth': 20}
     }
 
