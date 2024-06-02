@@ -47,7 +47,7 @@ def train_model_animated(model_name, x, y, x_min, x_max, **kwargs):
         model.fit(x.reshape(-1, 1), y)
         predictions.append(model.predict(np.linspace(x_min, x_max, 100).reshape(-1, 1)))
     elif model_name == 'Neural Network':
-        model = MLPRegressor(warm_start=True, **kwargs)
+        model = MLPRegressor(warm_start=True, random_state=0, **kwargs)
         for _ in range(kwargs['max_iter']):
             model.fit(x.reshape(-1, 1), y)
             predictions.append(model.predict(np.linspace(x_min, x_max, 100).reshape(-1, 1)))
@@ -148,7 +148,7 @@ def train_model_endpoint():
 
     model_params = {
         'Linear Regression': {},
-        'Neural Network': {'hidden_layer_sizes': (100, 50), 'max_iter': 30},
+        'Neural Network': {'hidden_layer_sizes': (30, 30), 'max_iter': 30},
         'Decision Tree': {'max_depth': 20}
     }
 
