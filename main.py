@@ -136,10 +136,11 @@ def generate_animation(data, predictions, polynomial_function):
 
 @app.route('/train_model', methods=['POST'])
 def train_model_endpoint():
+
     data = request.form.get('data')
     degree = int(request.form.get('degree', 2))
-    x_min = float(request.form.get('x_min', -10))
-    x_max = float(request.form.get('x_max', 10))
+    x_min = float(request.form.get('x_min', 0))
+    x_max = float(request.form.get('x_max', 1))
     model_name = request.form.get('model_name', 'Linear Regression')
 
     data = eval(data)
@@ -149,7 +150,7 @@ def train_model_endpoint():
     model_params = {
         'Linear Regression': {},
         'Neural Network': {'hidden_layer_sizes': (30, 30), 'max_iter': 30},
-        'Decision Tree': {'max_depth': 20}
+        'Decision Tree': {'max_depth': 10}
     }
 
     start_time = time.time()

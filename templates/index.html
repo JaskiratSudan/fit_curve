@@ -131,10 +131,12 @@
         });
 
         document.getElementById('trainModel').addEventListener('click', () => {
-            if (!globalData) {
-                document.getElementById('status').textContent = 'Generate data first!';
-                return;
-            }
+    if (!globalData) {
+        document.getElementById('status').textContent = 'Generate data first!';
+        return;
+    }
+
+            document.getElementById('status').textContent = 'Please wait...';
 
             const numPoints = document.getElementById('numPoints').value;
             const degree = document.getElementById('degree').value;
@@ -152,7 +154,7 @@
             .then(response => response.json())
             .then(data => {
                 const imgList = data.img_list;
-                document.getElementById('status').textContent = '';
+                document.getElementById('status').textContent = ''; // Clear the "Please wait" status
                 document.getElementById('trainingStatus').textContent = data.status;
 
                 let frame = 0;
